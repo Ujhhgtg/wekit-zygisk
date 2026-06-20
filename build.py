@@ -110,13 +110,9 @@ except Exception:
 
 
 # --- Core Architecture Mapping ---
-SUPPORTED_ABIS = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86", "riscv64"]
+SUPPORTED_ABIS = ["arm64-v8a"]
 ABI_NAME_ALIAS = {
     "arm64-v8a": ["arm64", "a64", "aarch64", "arm64_v8a"],
-    "armeabi-v7a": ["armeabi", "arm", "arm32", "a32", "armeabi_v7a"],
-    "x86": ["i386", "x32"],
-    "x86_64": ["x64", "x86-64"],
-    "riscv64": ["riscv"],
 }
 ABI_CHOICES = list(ABI_NAME_ALIAS.keys()) + sum(ABI_NAME_ALIAS.values(), [])
 ABI_MAP = {None: None}
@@ -128,60 +124,64 @@ for k, aliases in ABI_NAME_ALIAS.items():
 DEFAULT_ABI = "arm64-v8a"
 ABI_TO_MAGISK_ARCH = {
     "arm64-v8a": "arm64",
-    "armeabi-v7a": "arm",
-    "x86_64": "x64",
-    "x86": "x86",
-    "riscv64": "riscv64",
 }
 BUILD_TYPE_CHOICES = ["debug", "release"]
 BUILD_TYPE_CHOICES_MAP = {"debug": "Debug", "release": "RelWithDebInfo"}
 
+ABI_TO_RUST_TARGET = {
+    "arm64-v8a": "aarch64-linux-android",
+}
+
 
 # --- Build & Configurations Command Engines ---
-def config(abi, plat, build_type):
-    bin_build_type = BUILD_TYPE_CHOICES_MAP[build_type]
-    build_dir = BUILD_DIR / BUILD_DIR_NAME / abi
-    exec_cmd(
-        [
-            "cmake",
-            f"-H{SOURCE_DIR}",
-            f"-B{build_dir}",
-            f"-DANDROID_ABI={abi}",
-            f"-DANDROID_PLATFORM={plat}",
-            f"-DANDROID_NDK={ANDROID_NDK_HOME}",
-            "-DANDROID_STL=c++_static",
-            "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
-            f"-DCMAKE_TOOLCHAIN_FILE={CMAKE_TOOLCHAIN_FILE}",
-            f"-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={BIN_OUTPUT_DIR / abi}",
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={LIB_OUTPUT_DIR / abi}",
-            f"-DDEBUG_SYMBOLS_PATH={UNSTRIPPED_OUTPUT_DIR / abi}",
-            f"-DCMAKE_BUILD_TYPE={bin_build_type}",
-            f"-DMODULE_NAME={MODULE_ID}",
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-            "-G",
-            "Ninja",
-        ]
-    )
-
-
 def build_target(target, abi, plat, build_type):
-    build_dir = BUILD_DIR / BUILD_DIR_NAME / abi
-    config(abi, plat, build_type=build_type)
-    exec_cmd(["cmake", "--build", build_dir, "--", target, f"-j{os.cpu_count()}"])
-
-    bin_path = BIN_OUTPUT_DIR / abi / target
-    lib_path = LIB_OUTPUT_DIR / abi / target
-    return bin_path if bin_path.exists() else lib_path
+    build_all(abi, plat, build_type, force=False)
+    return LIB_OUTPUT_DIR / abi / f"lib{MODULE_ID}.so"
 
 
 def build_all(abi, plat, build_type, force):
+    target = ABI_TO_RUST_TARGET[abi]
+    cargo_profile = "release" if build_type == "release" else "debug"
+    out_dir = LIB_OUTPUT_DIR / abi
     if force:
-        shutil.rmtree(LIB_OUTPUT_DIR / abi, ignore_errors=True)
-        shutil.rmtree(BIN_OUTPUT_DIR / abi, ignore_errors=True)
-        shutil.rmtree(UNSTRIPPED_OUTPUT_DIR / abi, ignore_errors=True)
-    build_dir = BUILD_DIR / BUILD_DIR_NAME / abi
-    config(abi, plat, build_type=build_type)
-    exec_cmd(["cmake", "--build", build_dir, "--", f"-j{os.cpu_count()}"])
+        shutil.rmtree(out_dir, ignore_errors=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    env = dict(os.environ)
+    env["CARGO_TARGET_DIR"] = str(BUILD_DIR / BUILD_DIR_NAME / abi)
+    exec_cmd(
+        [
+            "cargo",
+            "build",
+            "-p",
+            "zygisk-wekit",
+            "--lib",
+            "--target",
+            target,
+            *(["--release"] if cargo_profile == "release" else []),
+        ],
+        cwd=str(SOURCE_DIR),
+        env=env,
+    )
+
+    src = (
+        BUILD_DIR / BUILD_DIR_NAME / abi / target / cargo_profile / "libzygisk_wekit.so"
+    )
+    if not src.exists():
+        sys.exit(f"cargo did not produce {src}")
+
+    dest = out_dir / f"lib{MODULE_ID}.so"
+    shutil.copy2(src, dest)
+
+    # Copy unstripped then strip for release builds
+    unstripped_abi_dir = UNSTRIPPED_OUTPUT_DIR / abi
+    unstripped_abi_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, unstripped_abi_dir / dest.name)
+    if cargo_profile == "release":
+        strip_tool = (
+            ANDROID_NDK_HOME / "toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+        )
+        exec_cmd([str(strip_tool), "--strip-all", str(dest)])
 
 
 def get_device_abi(device):
@@ -220,10 +220,6 @@ def build_cmd(args):
             plat=PLATFORM,
             build_type=args.build_type,
         )
-
-
-def config_cmd(args):
-    config(ABI_MAP[args.abi], plat=PLATFORM, build_type=args.build_type)
 
 
 def deploy_cmd(args):
@@ -308,7 +304,7 @@ def build_zip(args):
 
     shutil.copytree(NATIVE_OUTPUT_DIR, module_path, dirs_exist_ok=True)
 
-    build_name = f"{MODULE_NAME}-{RELEASE_NAME}-{GIT_COMMIT_COUNT}-{GIT_COMMIT_HASH}-{build_type}".replace(
+    build_name = f"{MODULE_ID}-{RELEASE_NAME}-{GIT_COMMIT_COUNT}-{GIT_COMMIT_HASH}-{build_type}".replace(
         " ", "-"
     )
     output_path = RELEASE_DIR / f"{build_name}.zip"
@@ -419,10 +415,6 @@ def main():
     build_args.add_argument("target", nargs="?")
     build_args.add_argument("-a", dest="abi", choices=ABI_CHOICES, default=DEFAULT_ABI)
     build_args.set_defaults(func=build_cmd)
-
-    config_args = subps.add_parser("config")
-    config_args.set_defaults(func=config_cmd)
-    config_args.add_argument("-a", dest="abi", choices=ABI_CHOICES, default=DEFAULT_ABI)
 
     deploy_args = subps.add_parser("deploy")
     deploy_args.add_argument("target")

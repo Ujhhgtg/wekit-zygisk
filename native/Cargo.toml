@@ -1,0 +1,20 @@
+[package]
+name = "zygisk-wekit"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "zygisk_wekit"
+crate-type = ["cdylib"]
+
+[dependencies]
+cxx = "1"
+libc = "0.2"
+
+[build-dependencies]
+cxx-build = "1"
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"

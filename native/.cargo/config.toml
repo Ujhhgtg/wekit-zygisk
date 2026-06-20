@@ -1,0 +1,32 @@
+[target.aarch64-linux-android]
+ar = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang"
+
+[target.x86_64-linux-android]
+ar = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang"
+
+[target.armv7-linux-androideabi]
+ar = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang"
+
+[target.i686-linux-android]
+ar = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android29-clang"
+
+[env]
+CC_aarch64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang"
+CXX_aarch64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
+AR_aarch64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+CC_x86_64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang"
+CXX_x86_64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android29-clang++"
+AR_x86_64_linux_android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+CC_armv7-linux-androideabi = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang"
+CXX_armv7-linux-androideabi = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang++"
+AR_armv7-linux-androideabi = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+
+CC_i686-linux-android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android29-clang"
+CXX_i686-linux-android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android29-clang++"
+AR_i686-linux-android = "/home/ujhhgtg/android-sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
